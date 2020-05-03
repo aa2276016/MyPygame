@@ -1,0 +1,105 @@
+import pygame
+from pygame.locals import *
+import random
+
+SCREEN_SIZE_X = 60
+SCREEN_SIZE_Y = 40
+SNAKE_TAIL_INIT_X = 1
+SNAKE_TAIL_INIT_Y = 10
+SNAKE_LENGTH_INIT = 6
+
+# key to vel
+K2V = {K_RIGHT: (1, 0), K_UP: (0, -1), K_LEFT: (-1, 0), K_DOWN: (0, 1)}
+
+
+class Map:
+    def __init__(self, grid_size_x, grid_size_y, block_size):
+        self.gsx = grid_size_x
+        self.gsy = grid_size_y
+        self.bks = block_size
+        self.screen = pygame.display.set_mode((self.gsx * self.bks, self.gsy * self.bks))
+        self.snake_body = None
+        self.fd_loc = None
+
+    def update(self):
+        black = (0, 0, 0)
+        blue = (47, 86, 233)
+        red = (255, 106, 106)
+        # draw background
+        self.screen.fill(black)
+        # draw snake
+        for snake_sec in self.snake_body:
+            loc_and_size = (snake_sec[0] * self.bks, snake_sec[1] * self.bks, self.bks, self.bks)
+            pygame.draw.rect(self.screen, blue, loc_and_size)
+        # draw food
+        if self.fd_loc != None:
+            loc_and_size = (self.fd_loc[0] * self.bks, self.fd_loc[1] * self.bks, self.bks, self.bks)
+            pygame.draw.rect(self.screen, red, loc_and_size)
+        pygame.display.update()
+
+
+class Snake:
+    def __init__(self, map):
+        self.snake_body = [(x, SNAKE_TAIL_INIT_Y)
+                           for x in range(SNAKE_TAIL_INIT_X, SNAKE_TAIL_INIT_X + SNAKE_LENGTH_INIT)]
+        self.mp = map
+        self.mp.snake_body = self.snake_body
+        self.velx = 1
+        self.vely = 0
+        self.move_rate = 4
+        self.main_clock = pygame.time.Clock()
+
+    def move(self):
+        self.main_clock.tick(self.move_rate)
+
+        self.__event_listening()
+        cur_head_x, cur_head_y = self.snake_body[-1]
+        forw_head_x = cur_head_x + self.velx
+        forw_head_y = cur_head_y + self.vely
+        self.snake_body.append((forw_head_x, forw_head_y))
+        self.mp.snake_body = self.snake_body
+
+    def eat(self, food):
+        if food.fd_loc in self.snake_body:
+            food.fd_loc = None
+        else:
+            self.snake_body.pop(0)
+
+    def __boundary_check(self):
+        pass
+
+    def __event_listening(self):
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                exit()
+            if event.type == KEYDOWN:
+                dx, dy = K2V[event.key]
+                if dx != self.velx and dy != self.vely:
+                    self.velx = dx
+                    self.vely = dy
+
+
+class Food:
+    def __init__(self, map):
+        self.fd_loc = None
+        self.mp = map
+
+    def generate(self, snake):
+        while self.fd_loc == None:
+            x = random.randrange(0, SCREEN_SIZE_X - 1)
+            y = random.randrange(0, SCREEN_SIZE_Y - 1)
+            if (x, y) not in snake.snake_body:
+                self.fd_loc = (x, y)
+                self.mp.fd_loc = self.fd_loc
+
+
+if __name__ == '__main__':
+    pygame.init()
+    mp = Map(60, 40, 10)
+    fd = Food(mp)
+    sk = Snake(mp)
+    while True:
+        fd.generate(sk)
+        sk.move()
+        sk.eat(fd)
+        mp.update()
